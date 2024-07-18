@@ -1,4 +1,4 @@
-This practice includes  JSON functionalities, Window functions, Groups/ Island concept for identifying consecutive number/ days/ date and more.
+This practice includes Complex SQL Queries, JSON functionalities, Window functions, Groups/ Island concept for identifying consecutive number/ days/ date and more.
 
 
 WITH cte AS
