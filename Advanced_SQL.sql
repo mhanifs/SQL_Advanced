@@ -1,7 +1,4 @@
-show databases;
-
-use sql_with_gpt;
-show tables;
+--This practice includes  JSON functionalities, Window functions, Groups/ Island concept for identifying consecutive number/ days/ date and more.
 
 SELECT * FROM Transactions;
 
