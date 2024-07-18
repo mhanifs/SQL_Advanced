@@ -1,0 +1,2499 @@
+This practice includes  JSON functionalities, Window functions, Groups/ Island concept for identifying consecutive number/ days/ date and more.
+
+
+WITH cte AS
+(
+	SELECT d.dept_name, SUM(e.salary) AS total_salary,
+	ROW_NUM() OVER(ORDER BY SUM(e.salary) DESC) AS rnk
+	FROM Employee e
+	JOIN Department d USING (dept_id)
+	GROUP BY d.dept_name
+)
+
+SELECT d.dept_name, total_salary
+FROM cte
+WHERE rnk = 2;
+
+
+Customer with third highest total order amount
+
+WITH cte AS
+(
+	SELECT c.customer_name, SUM(o.order_amount) AS total_order_amout,
+	ROW_NUMBER() OVER(ORDER BY SUM(o.order_amount) DESC) AS rnk
+	FROM Customers c
+	JOIN Orders o	USING (customer_id)
+	GROUP BY c.customer_name
+)
+
+SELECT c.customer_name, total_order_amount AS third_highest_order_total
+FROM cte
+WHERE r = 3;
+
+Highest average sale by category
+
+SELECT p.category, ROUND(SUM(p.price_per_unit * s.quantity)/ SUM(s.quantity),2) AS average_amount
+FROM Sales s
+LEFT JOIN Products p USING (product_id)
+GROUP BY category
+ORDER BY average_amount DESC
+LIMIT 1;
+
+Given a table named Employee containing employee information such as id, name, and salary, write a SQL query to rank employees based on their salary. If two employees have the same salary, they should receive the same ranking. The output should contain the employee's name, salary, and rank.
+
+SELECT Name, Salary,
+DENSE_RANK() OVER(ORDER BY Salary DESC)
+FROM Employee;
+
+
+SELECT 
+s1.product_id, s1.month,
+ROUND(((s1.amount - s2.amount)/ s2.amount) * 100, 2) AS YOY_growth_%
+FROM Sales s1
+JOIN Sales s2
+ON s1.product_id = s2.product_id
+AND
+MONTH(s1.month) = MONTH(s2.month)
+AND
+YEAR(s1.month) = YEAR(s2.month) + 1;
+
+
+Question: Employee Hierarchy and Salary
+Problem Statement
+
+Given a table named Employee that contains the employee information such as id, name, salary, and manager_id, write a SQL query to find the total salary expense for each manager. The total salary expense for a manager is the sum of the salaries of all employees directly reporting to the manager. Additionally, if an employee does not report to any manager (manager_id is NULL), their salary should not be included in the result.
+
+SELECT manager_id, SUM(salary) AS Total_Salary
+FROM Employee
+WHERE manganer_id IS NOT NULL
+GROUP BY manager_id
+ORDER BY manager_id;
+
+Project Assignment and Employee Performance
+Problem Statement
+
+Given two tables named Employee and Project_Assignment, write a SQL query to find the top-performing employee based on the total number of hours worked across all projects.
+
+SELECT e.name, SUM(p.hours) AS Total_Hours
+FROM
+Project_Assignments p
+LEFT JOIN Employee e
+ON e.id = p.employee_id
+GROUP BY e.name
+ORDER BY Total_Hours DESC
+Limit 1;
+
+
+Finding Top-Selling Products
+Problem Statement
+
+Given two tables, Products and Sales, write a SQL query to find the top 3 products based on the total sales amount. The total sales amount for each product is calculated as the sum of price_per_unit multiplied by quantity.
+
+1 Solution:
+
+SELECT s.product_id, p.product_name,  SUM(s.quantity * p.price_per_unit) AS total_sales
+FROM Sales s
+JOIN Products p
+USING (product_id)
+GROUP BY product_id
+ORDERY BY total_sales DESC
+LIMIT 3;
+
+
+Next Question: Finding Employees with Top N Salaries
+Problem Statement
+
+Given a table Employee that contains employee information such as id, name, and salary, write a SQL query to find the employees with the top 3 highest salaries.
+
+Table Schema
+
+yaml
+
+Employee
++----+-------+--------+
+| Id | Name  | Salary |
++----+-------+--------+
+| 1  | John  | 1000   |
+| 2  | Jane  | 1500   |
+| 3  | Alice | 2000   |
+| 4  | Bob   | 1200   |
+| 5  | Carol | 1800   |
++----+-------+--------+
+
+Expected Output
+
+diff
+
++----+-------+--------+
+| Id | Name  | Salary |
++----+-------+--------+
+| 3  | Alice | 2000   |
+| 5  | Carol | 1800   |
+| 2  | Jane  | 1500   |
++----+-------+--------+
+
+2 Solution: 
+
+WITH cte AS
+(
+SELECT id, name, Salary,
+RANK() OVER(ORDER BY Salary DESC) r
+)
+
+SELECT Id, Name, Salary
+FROM cte
+WHERE r <= 3
+ORDER BY Salary DESC;
+
+ Employees and Departments with Total Salary
+Problem Statement
+
+Given two tables Employee and Department, write a SQL query to find the total salary expense for each department, and include departments with no employees as well.
+Table Schemas
+
+
+Employee
++----+-------+--------+------------+
+| Id | Name  | Salary | Department_id |
++----+-------+--------+------------+
+| 1  | John  | 1000   | 1          |
+| 2  | Jane  | 1500   | 2          |
+| 3  | Alice | 2000   | 1          |
+| 4  | Bob   | 1200   | 3          |
+| 5  | Carol | 1800   | 2          |
++----+-------+--------+------------+
+
+Department
++----+-------+
+| Id | Name  |
++----+-------+
+| 1  | HR    |
+| 2  | IT    |
+| 3  | Sales |
+| 4  | Admin |
++----+-------+
+
+Expected Output
+
+diff
+
++------------+--------------+
+| Department | Total_Salary |
++------------+--------------+
+| HR         |         3000 |
+| IT         |         3300 |
+| Sales      |         1200 |
+| Admin      |            0 |
++------------+--------------+
+
+
+3 Solution:
+
+SELECT d.Department, SUM(e.Salary) AS Total_Salary
+FROM Employee e
+LEFT JOIN Department d
+ON e.Department_id = d.id
+GROUP BY d.Department
+ORDER BY Total_Salary DESC;
+
+
+ Finding the Longest Consecutive Work Period
+Problem Statement
+
+Given a table EmployeeAttendance that logs the daily attendance of employees, write a SQL query to find the longest consecutive period each employee has worked without any days off.
+Table Schema
+
+yaml
+
+EmployeeAttendance
++------------+-------------+------------+
+| employee_id| attendance_date |
++------------+-------------+------------+
+|          1 | 2024-01-01  |
+|          1 | 2024-01-02  |
+|          1 | 2024-01-03  |
+|          2 | 2024-01-01  |
+|          2 | 2024-01-03  |
+|          1 | 2024-01-05  |
+|          3 | 2024-01-01  |
+|          3 | 2024-01-02  |
++------------+-------------+------------+
+
+Expected Output
+
+diff
+
++------------+--------------+----------------------+
+| employee_id| longest_streak|
++------------+--------------+----------------------+
+|          1 |              3|
+|          2 |              1|
+|          3 |              2|
++------------+--------------+----------------------+
+
+4 Solution:
+WITH cte AS
+(
+SELECT  employee_id, attendance_date,
+attendance_date - INTERVAL ROW_NUMBER(PARTITION BY employee_id ORDER BY attendance_date) DAY AS group_id
+FROM EmployeeAttendance 
+),
+
+grouped AS
+(
+SELECT employee_id, attendance_date,
+COUNT(*) AS streak_length 
+FROM cte
+)
+
+SELECT employee_id, 
+MAX(streak_length) AS longest_streak
+FROM grouped
+GROUP BY employee_id;
+
+NOTE: Explanation
+
+The goal is to create a group_id that remains the same for consecutive dates and changes when there is a break in the sequence of dates.
+Step-by-Step Breakdown
+
+    ROW_NUMBER() OVER (PARTITION BY employee_id ORDER BY attendance_date):
+        This function assigns a unique sequential integer to rows within the partition of each employee_id, ordered by attendance_date.
+        For example, for employee_id = 1 with attendance dates 2024-01-01, 2024-01-02, and 2024-01-03, the row numbers will be 1, 2, and 3.
+
+    attendance_date - INTERVAL ROW_NUMBER() DAY:
+        This subtracts the number of days indicated by the row number from the attendance_date.
+        This subtraction shifts each date back by the number of days equal to its row number, effectively normalizing consecutive dates to the same value.
+
+Example
+
+Let's see how it works with the given data for employee_id = 1:
+
+yaml
+
++-------------+----------------+-----------------------------+-------------+
+| employee_id | attendance_date| ROW_NUMBER                  | group_id    |
++-------------+----------------+-----------------------------+-------------+
+| 1           | 2024-01-01     | 1                           | 2023-12-31  |
+| 1           | 2024-01-02     | 2                           | 2024-01-01  |
+| 1           | 2024-01-03     | 3                           | 2024-01-01  |
+| 1           | 2024-01-05     | 4                           | 2024-01-01  |
++-------------+----------------+-----------------------------+-------------+
+
+    For 2024-01-01:
+        attendance_date - INTERVAL 1 DAY = 2024-01-01 - 1 DAY = 2023-12-31
+
+    For 2024-01-02:
+        attendance_date - INTERVAL 2 DAY = 2024-01-02 - 2 DAY = 2024-01-01
+
+    For 2024-01-03:
+        attendance_date - INTERVAL 3 DAY = 2024-01-03 - 3 DAY = 2024-01-01
+
+    For 2024-01-05:
+        attendance_date - INTERVAL 4 DAY = 2024-01-05 - 4 DAY = 2024-01-01
+
+The group_id thus normalizes consecutive dates to the same value, grouping them together. Non-consecutive dates will result in different group_id values.
+Final Grouping. With the normalized dates (group_id), you can then group by employee_id and group_id to count the streaks of consecutive dates.
+******************************************************************************************************************
+
+Finding the Second Highest Salary
+Problem Statement
+
+Given a table Employee with columns id, name, and salary, write a SQL query to find the second highest salary.
+Table Schema
+
+yaml
+
+Employee
++----+-------+--------+
+| Id | Name  | Salary |
++----+-------+--------+
+| 1  | John  | 1000   |
+| 2  | Jane  | 1500   |
+| 3  | Alice | 2000   |
+| 4  | Bob   | 1200   |
+| 5  | Carol | 1800   |
++----+-------+--------+
+
+Expected Output
+
+diff
+
++--------+
+| Salary |
++--------+
+| 1800   |
++--------+
+
+5 Solution:
+
+WITH cte AS
+(
+SELECT Name, Salary,
+RANK() OVER(ORDER BY Salary DESC) rank
+)
+
+SELECT Salary,
+FROM cte
+WHERE rank = 2;
+
+SELECT MAX(salary) AS SecondHighestSalary
+FROM Employee
+WHERE Salary < (SELECT MAX(Salary) FROM Employee)
+
+SELECT
+    IFNULL(
+      (SELECT DISTINCT Salary
+       FROM Employee
+       ORDER BY Salary DESC
+        LIMIT 1 OFFSET 1), NULL) AS SecondHighestSalary;
+
+Question: Find Departments with Maximum and Minimum Average Salaries
+Problem Statement
+
+Given two tables Employee and Department, write a SQL query to find the department with the highest average salary and the department with the lowest average salary. Include the department name and the average salary in the output.
+Table Schemas
+
+diff
+
+Employee
++----+--------+--------+-------------+
+| id | name   | salary | department_id|
++----+--------+--------+-------------+
+| 1  | John   | 1000   | 1           |
+| 2  | Jane   | 1500   | 2           |
+| 3  | Alice  | 2000   | 1           |
+| 4  | Bob    | 1200   | 2           |
+| 5  | Carol  | 1800   | 3           |
++----+--------+--------+-------------+
+
+Department
++----+-------------+
+| id | department_name |
++----+-------------+
+| 1  | HR          |
+| 2  | Engineering |
+| 3  | Marketing   |
++----+-------------+
+
+Expected Output
+
+diff
+
++----------------------+----------------------+----------------------+
+| department_name | highest_avg_salary | lowest_avg_salary |
++----------------------+----------------------+----------------------+
+| Marketing	       | 1800 	    	         | HR              1500   |
++---------------------+-----------------------+----------------------+
+
+6 Solution:
+
+WITH cte AS
+(
+SELECT e.id AS employee_id, e.name AS employee_name, e.salary, d.id AS department_id, d.name AS department_name
+FROM Employee e
+JOIN Department d
+ON e.department_id = d.id
+),
+
+highest_avg_salary AS
+(
+SELECT department_name AS higest_avg_dept, (AVG(Salary)) AS highest_avg_salary
+FROM cte
+GROUP BY department_name
+ORDER BY highest_avg_salary DESC
+LIMIT 1
+),
+
+lowest_avg_salary AS
+(
+SELECT d.department_name AS lowest_avg_dept, (AVG(Salary)) AS lowest_avg_salary
+FROM cte
+GROUP BY department_name
+ORDER BY highest_avg_salary ASC
+LIMIT 1
+)
+
+SELECT 
+h.highest_avg_dept, h.highest_average_salary,
+l.lowest_avg_dept, l.lowest_average_salary
+FROM higest_avg_salary h
+CROSS JOIN lowest_average_salary l;
+
+
+Question: Find the departments with the highest and lowest number of employees.
+
+Sample Tables:
+
+Employee:
+id	name	department_id
+1	John	1
+2	Jane	1
+3	Alice	2
+4	Bob	3
+5	Charlie	3
+6	Dave	3
+
+Department:
+id	name
+1	HR
+2	Finance
+3	Engineering
+
+Expected Output:
+-----------------------------------------+----------------------------+----------------------------------------+----------------------------------
+department_with_most_employees	most_employees_count	department_with_least_employees	least_employees_count
+Engineering					3					Finance						1
+-----------------------------------------+----------------------------+----------------------------------------+----------------------------------
+
+7 Solution:
+
+
+WITH cte AS
+(
+SELECT e.id AS employee_id, e.name AS employee_name, d.id AS department_id, d.name AS department_name
+FROM Employee e
+JOIN Department d
+ON e.department_id = d.id
+),
+
+most_employees AS
+(
+SELECT department_name AS department_with_most_employees, COUNT(*) AS most_employees_count
+FROM cte
+GROUP BY department_name
+ORDER BY most_employees_count DESC
+LIMIT 1
+),
+
+least_employees AS
+(
+SELECT department_name AS department_with_least_employees, COUNT(*) AS least_employees_count
+FROM cte
+GROUP BY department_name
+ORDER BY least_employees_count ASC
+LIMIT 1
+)
+
+SELECT
+m.department_with_most_employees, m.most_employees_count,
+l.department_with_least_employees, l.least_employees_count
+FROM most_employees m
+CROSS JOIN least_employees l;
+
+
+Question: Find the employees who have the same salary as the highest-paid employee in their department.
+
+Sample Tables:
+
+Employee:
+id	name	department_id	salary
+1	John	1	5000
+2	Jane	1	4000
+3	Alice	2	4500
+4	Bob	3	6000
+5	Charlie	3	6000
+6	Dave	3	5500
+
+Expected Output:
+employee_id	employee_name	department_id	salary
+1	John	1	5000
+4	Bob	3	6000
+5	Charlie	3	6000
+
+8 Solution:
+
+WITH cte AS
+(
+SELECT 
+*, RANK() OVER(PARTITION BY department_id ORDER BY salary DESC) AS rank
+FROM Employee
+),
+
+highest_salary AS 
+(
+SELECT * 
+FROM cte
+WHERE rank = 1
+)
+
+SELECT employee_id, employee_name, department_id, salary
+FROM highest_salary
+WHERE (department_id, salary) IN
+		 (
+			SELECT  department_id, MAX(salary)
+			FROM cte
+			GROUP BY department_id
+
+		);
+
+Hard Level SQL Question:
+
+Question: Given a table Logs which contains two columns id and action, write an SQL query to find the id of the start and end log entries for every continuous sequence of "start" and "end" actions.
+
+Sample Table:
+
+Logs:
+id	action
+1	start
+2	start
+3	end
+4	start
+5	end
+6	end
+7	start
+8	end
+
+Expected Output:
+start_id	end_id
+1	3
+4	6
+7	8
+
+Explanation:
+
+    The first continuous sequence of "start" and "end" actions starts at id 1 and ends at id 3.
+    The second sequence starts at id 4 and ends at id 6.
+    The third sequence starts at id 7 and ends at id 8.
+
+9 Solution:
+
+WITH cte AS
+(
+SELECT
+id, action, DENSE_RANK() OVER(ORDER BY action) AS rank
+FROM Logs
+)
+
+SELECT 
+CASE WHEN 
+
+
+id	diff
+1	-1
+2	0
+3	2
+4	2
+5	4
+6	5
+7	5
+8	7
+
+
+1	start
+2	start
+3	end
+4	start
+5	end
+6	end
+7	start
+8	end
+
+
+
+Above question remained unsolved, gpt could not help achieve the expected output for question it provided.
+
+Finding Gaps in Consecutive Dates
+Table: UserActivity
+user_id	activity_date
+1	2024-01-01
+1	2024-01-02
+1	2024-01-04
+1	2024-01-05
+2	2024-01-01
+2	2024-01-03
+2	2024-01-04
+2	2024-01-06
+3	2024-01-01
+3	2024-01-02
+3	2024-01-03
+3	2024-01-07
+Task:
+
+Identify the start and end dates of each continuous period of activity for each user.
+Expected Output:
+user_id	start_date	end_date
+1	2024-01-01	2024-01-02
+1	2024-01-04	2024-01-05
+2	2024-01-01	2024-01-01
+2	2024-01-03	2024-01-04
+2	2024-01-06	2024-01-06
+3	2024-01-01	2024-01-03
+3	2024-01-07	2024-01-07
+
+Solution Approach:
+
+We will use a similar approach of creating groups for consecutive dates and then identifying the start and end of each group.
+
+10 Solution:
+ 
+WITH date_groups AS
+(
+SELECT user_id, activity_date,
+DATE_SUB(activity_date, INTERVAL ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY activity_date) DAY) AS grp
+FROM UserActivity
+)
+
+SELECT user_id,
+MIN(activity_date) AS start_date,
+MAX(activity_date) AS end_date
+FROM date_groups
+GROUP BY user_id, grp;
+
+
+Problem Statement:
+
+You have two tables, Employees and Departments, with the following structures:
+
+Employees Table:
+
+    employee_id (int, primary key): The unique identifier for each employee.
+    employee_name (varchar): The name of the employee.
+    department_id (int): The department to which the employee belongs.
+    salary (int): The salary of the employee.
+
+Departments Table:
+
+    department_id (int, primary key): The unique identifier for each department.
+    department_name (varchar): The name of the department.
+
+Write a SQL query to find the average salary of employees in each department, rounded to the nearest integer. Display the department name along with the average salary.
+Example:
+
+Given the following tables:
+
+Employees Table:
+
+lua
+
+| employee_id | employee_name | department_id | salary |
+|-------------|---------------|---------------|--------|
+| 1           | Alice         | 1             | 50000  |
+| 2           | Bob           | 1             | 60000  |
+| 3           | Charlie       | 2             | 70000  |
+| 4           | David         | 2             | 80000  |
+| 5           | Eve           | 2             | 90000  |
+
+Departments Table:
+
+lua
+
+| department_id | department_name |
+|---------------|-----------------|
+| 1             | HR              |
+| 2             | Engineering     |
+
+Your query should return:
+
+lua
+
+| department_name 	| average_salary  |
+|-----------------------|-------------------|
+| HR 		                | 55000          	   |
+| Engineering     	| 80000          	   |
+
+Notes: Round the average salary to the nearest integer.
+
+Soultion:
+
+WITH cte AS
+(
+SELECT e.employee_id AS emp_id, e.employee_name AS emp_name, e.department_id AS dept_id, e.salary AS salary, d.department_name AS dept_name
+FROM Employees e
+LEFT JOIN Departments d
+USING (department_id)
+)
+
+SELECT dept_name, ROUND(AVG(salary)) AS average_salary
+FROM cte
+GROUP BY dept_name;
+
+Problem Statement:
+
+You have a table named Orders with the following structure:
+
+Orders Table:
+
+    order_id (int, primary key): The unique identifier for each order.
+    customer_id (int): The customer who placed the order.
+    order_date (date): The date when the order was placed.
+    total_amount (decimal): The total amount of the order.
+
+Write a SQL query to find the top 3 customers who have spent the most in total. Display the customer_id, total_amount they have spent, and the rank of each customer based on their total spending.
+Example:
+
+Given the following Orders table:
+
+yaml
+
+| order_id | customer_id | order_date | total_amount |
+|----------|-------------|------------|--------------|
+| 1        | 101         | 2024-01-01 | 100.00       |
+| 2        | 102         | 2024-01-02 | 150.00       |
+| 3        | 101         | 2024-01-03 | 200.00       |
+| 4        | 103         | 2024-01-04 | 120.00       |
+| 5        | 102         | 2024-01-05 | 180.00       |
+| 6        | 101         | 2024-01-06 | 220.00       |
+
+Your query should return:
+	
+lua
+
+| customer_id | total_amount | rank |
+|-------------|--------------|------|
+| 101         | 520.00       | 1    |
+| 102         | 330.00       | 2    |
+| 103         | 120.00       | 3    |
+
+11 Solution:
+
+SELECT customer_id, SUM(total_amount) AS total_amount,
+DENSE_RANK() OVER(ORDER BY  SUM(total_amount)) r
+FROM ORDERS
+GROUP BY customer_id;
+
+
+
+Problem Statement
+
+Write a SQL query to find the average salary of employees in each department, along with the department name. Sort the result by the average salary in descending order.
+
+
+Table: Employees
+
+diff
+
++-------------+-------------+------------+--------+
+| employee_id | employee_name | department_id | salary |
++-------------+-------------+------------+--------+
+| 1           | Alice         | 101          | 60000  |
+| 2           | Bob           | 102          | 70000  |
+| 3           | Charlie       | 101          | 55000  |
+| 4           | David         | 103          | 62000  |
+| 5           | Eve           | 102          | 80000  |
+| 6           | Frank         | 101          | 72000  |
++-------------+-------------+------------+--------+
+
+Table: Departments
+
+diff
+
++-------------+-----------------+
+| department_id | department_name |
++-------------+-----------------+
+| 101           | Sales           |
+| 102           | Marketing       |
+| 103           | Engineering     |
++-------------+-----------------+
+
+
+12 Solution:
+
+SELECT e.employee_id emp_id, e.employee_name emp_name, e.department_id dept_id,  d.department_name dept_name, AVG(e.salary) average_salary
+FROM Employees e
+JOIN Departments d
+USING (department_id)
+GROUP BY average_salary
+
+
+Problem Statement:
+
+You are given a table Orders with the following schema:
+
+sql
+
+Orders
++-------------+---------+
+| Column Name | Type    |
++-------------+---------+
+| order_id    | int     |
+| customer_id | int     |
+| order_date  | date    |
+| amount      | decimal |
++-------------+---------+
+
+Write a query to find the customer who placed the maximum number of orders and the total amount they spent.
+
+
+Requirements:
+
+    Find the customer who placed the maximum number of orders.
+    Calculate the total amount spent by this customer.
+
+
+yaml
+
+Orders
++----------+-------------+------------+--------+
+| order_id | customer_id | order_date | amount |
++----------+-------------+------------+--------+
+| 1        | 1           | 2024-01-01 | 50.00  |
+| 2        | 1           | 2024-01-02 | 30.00  |
+| 3        | 2           | 2024-01-03 | 70.00  |
+| 4        | 1           | 2024-01-04 | 40.00  |
+| 5        | 3           | 2024-01-05 | 60.00  |
+| 6        | 2           | 2024-01-06 | 80.00  |
+| 7        | 1           | 2024-01-07 | 20.00  |
+| 8        | 3           | 2024-01-08 | 90.00  |
+| 9        | 1           | 2024-01-09 | 60.00  |
+| 10       | 2           | 2024-01-10 | 40.00  |
++----------+-------------+------------+--------+
+
+Given this dataset, the output should be:
+
+diff
+
++-------------+----------------+--------------+
+| customer_id | num_of_orders  | total_amount |
++-------------+----------------+--------------+
+| 1           | 5              | 200.00       |
++-------------+----------------+--------------+
+
+13 Solution:
+
+SELECT customer_id, COUNT(*) AS num_of_orders, SUM(amount) AS total_amount
+FROM Orders
+GROUP BY customer_id
+ORDER BY amount DESC
+LIMIT 1;
+
+
+Question
+
+Find the highest-selling product(s) by total sales amount.
+
+Table: Sales
+
+    sale_id (INT)
+    product_id (INT)
+    quantity (INT)
+    sale_amount (DECIMAL)
+
+Table: Products
+
+    product_id (INT)
+    product_name (VARCHAR)
+
+Sample Data:
+
+Sales
+sale_id	product_id	quantity	sale_amount
+1	101	2	200.00
+2	102	1	150.00
+3	101	1	100.00
+4	103	5	500.00
+5	102	2	300.00
+
+Products
+product_id	product_name
+101	Product A
+102	Product B
+103	Product C
+Task
+
+Write an SQL query to find the product(s) with the highest total sales amount. The query should return the product name(s) and the total sales amount.
+Expected Output
+product_name	total_sales_amount
+Product C	500.00
+
+14 Solution:
+
+SELECT p.product_name, SUM(s.sale_amount) AS total_sales_amount
+FROM Sales s
+LEFT JOIN Products p
+ON s.product_id = p.product_id
+GROUP BY p.product_name
+ORDER BY total_sales_amount DESC
+LIMIT 1;
+
+Problem: Finding the Most Popular Product Category
+
+Write a SQL query to find the most popular product category based on the total quantity sold. The output should include the product category and the total quantity sold for that category.
+
+Tables:
+
+    Products
+        product_id: INT
+        product_name: VARCHAR
+        category: VARCHAR
+
+    Sales
+        sale_id: INT
+        product_id: INT
+        quantity: INT
+
+Expected Output:
+category	total_quantity_sold
+category_name	quantity
+Sample Datasets
+
+Products Table:
+product_id	product_name	category
+1	Product A	Category 1
+2	Product B	Category 2
+3	Product C	Category 1
+4	Product D	Category 3
+
+Sales Table:
+sale_id	product_id	quantity
+1	1	10
+2	2	5
+3	1	15
+4	3	20
+5	4	25
+Optimization Tip:
+
+When joining tables and performing aggregations, ensure you have indexes on the columns used in the joins and aggregations to speed up query execution. In this case, having indexes on product_id in both Products and Sales tables would be beneficial.
+
+15 Solution:
+
+SELECT p.category, SUM(s.quantity) AS total_quantity_sold
+FROM Sales s
+LEFT JOIN Products p
+USING (product_id)
+GROUP BY p.category
+ORDER BY total_quantity_sold DESC
+LIMIT 1;
+
+LeetCode Hard: #177 Nth Highest Salary
+
+Write a SQL query to get the nth highest salary from the Employee table.
+Table Schema:
+
+sql
+
+CREATE TABLE Employee (
+    id INT,
+    salary INT
+);
+
+Expected Output:
+
+The output should be a single column NthHighestSalary which contains the nth highest salary. If there is no nth highest salary, the query should return null.
+Example:
+
+For the table Employee:
+
+plaintext
+
++----+--------+
+| id | salary |
++----+--------+
+| 1  | 100    |
+| 2  | 200    |
+| 3  | 300    |
++----+--------+
+
+For n = 2, the output should be:
+
+plaintext
+
++-----------------+
+| NthHighestSalary|
++-----------------+
+| 200             |
++-----------------+
+
+For n = 4, the output should be:
+
+plaintext
+
++-----------------+
+| NthHighestSalary|
++-----------------+
+| null            |
++-----------------+
+
+Additional Challenge:
+
+To make it more interesting, try solving this problem using both DENSE_RANK() and ROW_NUMBER() window functions to understand the difference in their behavior for this problem.
+Optimization Tips:
+
+    Indexing: Ensure you have an index on the salary column for better performance.
+    Window Functions: Use window functions efficiently to avoid unnecessary computations.
+    Subqueries: Avoid subqueries inside the WHERE clause if possible, as they can be performance bottlenecks.
+
+Give it a try, and let me know how it goes!
+Thank you. I will attempt the query with both DENSE_RANK() and ROW_NUMBER(). Please explain how to determine value of n, for example in other programming languages viz. python c et al., n i taken as input. How will this be handled here
+ChatGPT
+
+In SQL, you can handle the input value of n using a placeholder or variable if your SQL environment supports it. However, for standard SQL environments where variables are not directly supported in queries, you typically need to replace n manually in your query.
+
+Here’s how you can approach this using both DENSE_RANK() and ROW_NUMBER() window functions:
+Using DENSE_RANK()
+
+sql
+
+-- Replace `n` with the desired value
+WITH RankedSalaries AS (
+    SELECT 
+        salary,
+        DENSE_RANK() OVER (ORDER BY salary DESC) AS rank
+    FROM Employee
+)
+SELECT 
+    CASE 
+        WHEN MAX(rank) >= n THEN salary
+        ELSE NULL 
+    END AS NthHighestSalary
+FROM RankedSalaries
+WHERE rank = n;
+
+Using ROW_NUMBER()
+
+sql
+
+-- Replace `n` with the desired value
+WITH RankedSalaries AS (
+    SELECT 
+        salary,
+        ROW_NUMBER() OVER (ORDER BY salary DESC) AS rank
+    FROM Employee
+)
+SELECT 
+    CASE 
+        WHEN MAX(rank) >= n THEN salary
+        ELSE NULL 
+    END AS NthHighestSalary
+FROM RankedSalaries
+WHERE rank = n;
+
+Handling n in Different SQL Environments
+
+    Standard SQL without Variable Support:
+        Manually replace n with the desired number in the query.
+
+    MySQL:
+        You can use user-defined variables to simulate input:
+
+        sql
+
+    SET @n := 2;
+
+    WITH RankedSalaries AS (
+        SELECT 
+            salary,
+            DENSE_RANK() OVER (ORDER BY salary DESC) AS rank
+        FROM Employee
+    )
+    SELECT 
+        CASE 
+            WHEN MAX(rank) >= @n THEN salary
+            ELSE NULL 
+        END AS NthHighestSalary
+    FROM RankedSalaries
+    WHERE rank = @n;
+
+PostgreSQL:
+
+    Use the DO block for procedural code:
+
+    sql
+
+    DO $$
+    DECLARE
+        n INT := 2;
+        result INT;
+    BEGIN
+        SELECT salary INTO result
+        FROM (
+            SELECT 
+                salary,
+                DENSE_RANK() OVER (ORDER BY salary DESC) AS rank
+            FROM Employee
+        ) AS RankedSalaries
+        WHERE rank = n;
+        
+        RAISE NOTICE 'Nth Highest Salary: %', result;
+    END $$;
+
+SQL Server:
+
+    Use a variable in a similar way:
+
+    sql
+
+        DECLARE @n INT;
+        SET @n = 2;
+
+        WITH RankedSalaries AS (
+            SELECT 
+                salary,
+                DENSE_RANK() OVER (ORDER BY salary DESC) AS rank
+            FROM Employee
+        )
+        SELECT 
+            CASE 
+                WHEN MAX(rank) >= @n THEN salary
+                ELSE NULL 
+            END AS NthHighestSalary
+        FROM RankedSalaries
+        WHERE rank = @n;
+
+Running the Query
+
+    Replace n with the desired value in the query.
+    Execute the query to get the nth highest salary.
+
+Give it a try with both approaches and let me know if you encounter any issues or have further questions!
+I will try this out on Mysql. 
+
+So, SET @n := <n value>; is the syntax to set any value, correct? And this value can be subsequently changed based on requirement?
+ChatGPT
+
+Yes, that's correct. In MySQL, you can use the SET statement to define and set a user-defined variable. You can then use this variable in your queries. The syntax for setting a variable is as follows:
+
+sql
+
+SET @n := <n value>;
+
+You can change the value of this variable as needed by simply reusing the SET statement with a different value.
+
+Here’s a complete example demonstrating how to find the nth highest salary using a variable in MySQL:
+
+    Set the variable @n:
+
+    sql
+
+SET @n := 2; -- Set n to the desired value
+
+Use the variable in your query:
+
+sql
+
+    WITH RankedSalaries AS (
+        SELECT 
+            salary,
+            DENSE_RANK() OVER (ORDER BY salary DESC) AS rank
+        FROM Employee
+    )
+    SELECT 
+        CASE 
+            WHEN MAX(rank) >= @n THEN salary
+            ELSE NULL 
+        END AS NthHighestSalary
+    FROM RankedSalaries
+    WHERE rank = @n;
+
+Step-by-Step Example
+Setting the Variable
+
+sql
+
+SET @n := 3; -- Example: setting n to 3 to find the 3rd highest salary
+
+Using the Variable in the Query
+
+sql
+
+WITH RankedSalaries AS (
+    SELECT 
+        salary,
+        DENSE_RANK() OVER (ORDER BY salary DESC) AS rank
+    FROM Employee
+)
+SELECT 
+    CASE 
+        WHEN MAX(rank) >= @n THEN salary
+        ELSE NULL 
+    END AS NthHighestSalary
+FROM RankedSalaries
+WHERE rank = @n;
+
+Changing the Value of @n
+
+If you want to change the value of @n and find a different nth highest salary, you can simply set the variable again:
+
+sql
+
+SET @n := 4; -- Now setting n to 4 to find the 4th highest salary
+
+Then, rerun the query using the same structure. The value of @n can be adjusted as needed for different requirements.
+
+Give it a try with different values for @n and see how it works. Let me know if you encounter any issues or have further questions!
+I will need table schema and dataset
+ChatGPT
+
+Sure, here’s a table schema for Employee and some sample data to work with:
+Table Schema
+
+sql
+
+CREATE TABLE Employee (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100),
+    salary DECIMAL(10, 2)
+);
+
+Sample Data
+
+sql
+
+INSERT INTO Employee (name, salary) VALUES 
+('Alice', 60000),
+('Bob', 70000),
+('Charlie', 80000),
+('David', 90000),
+('Eva', 100000),
+('Frank', 60000),
+('Grace', 70000),
+('Hannah', 80000),
+('Isaac', 90000),
+('Jack', 100000);
+
+Setting Up the Variable and Query
+
+    Set the variable @n:
+
+sql
+
+SET @n := 2; -- Example: setting n to 2 to find the 2nd highest salary
+
+    Using the variable in the query:
+
+sql
+
+WITH RankedSalaries AS (
+    SELECT 
+        salary,
+        DENSE_RANK() OVER (ORDER BY salary DESC) AS rank
+    FROM Employee
+)
+SELECT 
+    CASE 
+        WHEN MAX(rank) >= @n THEN salary
+        ELSE NULL 
+    END AS NthHighestSalary
+FROM RankedSalaries
+WHERE rank = @n;
+
+Full Setup
+
+Here’s the complete setup including creating the table, inserting the data, setting the variable, and running the query:
+
+sql
+
+-- Create the Employee table
+CREATE TABLE Employee (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100),
+    salary DECIMAL(10, 2)
+);
+
+-- Insert sample data
+INSERT INTO Employee (name, salary) VALUES 
+('Alice', 60000),
+('Bob', 70000),
+('Charlie', 80000),
+('David', 90000),
+('Eva', 100000),
+('Frank', 60000),
+('Grace', 70000),
+('Hannah', 80000),
+('Isaac', 90000),
+('Jack', 100000);
+
+-- Set the variable @n
+SET @n := 2; -- Example: setting n to 2 to find the 2nd highest salary
+
+-- Query to find the nth highest salary
+WITH RankedSalaries AS (
+    SELECT 
+        salary,
+        DENSE_RANK() OVER (ORDER BY salary DESC) AS rank
+    FROM Employee
+)
+SELECT 
+    CASE 
+        WHEN MAX(rank) >= @n THEN salary
+        ELSE NULL 
+    END AS NthHighestSalary
+FROM RankedSalaries
+WHERE rank = @n;
+
+
+16 Soultion:
+
+WITH cte AS
+(
+SELECT salary,
+DENSE_RANK() OVER(ORDER BY salary DESC) AS r
+FROM Employee
+)
+
+SELECT CASE WHEN MAX(r) >=@n THEN salary
+ELSE NULL
+END AS nthHighestSalary
+FROM cte
+WHERE rank = @n;
+
+
+WITH cte AS
+(
+SELECT salary,
+ROW_NUMBER() OVER(ORDER BY salary DESC) AS r
+FROM Employee
+)
+
+SELECT CASE WHEN MAX(r) >=@n THEN salary
+ELSE NULL
+END AS nthHighestSalary
+FROM cte
+WHERE r =@n;
+
+
+
+WITH RankedSalaries AS (
+    SELECT 
+        salary,
+        ROW_NUMBER() OVER (ORDER BY salary DESC) AS r
+    FROM Employee
+)
+SELECT 
+    CASE 
+        WHEN MAX(rank) >= n THEN salary
+        ELSE NULL 
+    END AS NthHighestSalary
+FROM RankedSalaries
+WHERE rank = n;
+
+Problem Statement
+
+You are given a table Transactions with the following schema:
+
+sql
+
++-----------------+---------+
+| Column Name     | Type    |
++-----------------+---------+
+| transaction_id  | int     |
+| user_id         | int     |
+| transaction_date| date    |
+| amount          | int     |
++-----------------+---------+
+
+Write an SQL query to find the user who has the highest total transaction amount within a single day. If there are multiple users with the same highest total amount, return the one with the earliest transaction date.
+Expected Output
+
+The result should include:
+
+    user_id
+    total_amount
+    transaction_date
+
+Dataset Example
+
+yaml
+
++----------------+---------+------------------+--------+
+| transaction_id | user_id | transaction_date | amount |
++----------------+---------+------------------+--------+
+| 1              | 1       | 2023-01-01       | 100    |
+| 2              | 1       | 2023-01-01       | 150    |
+| 3              | 2       | 2023-01-01       | 200    |
+| 4              | 3       | 2023-01-02       | 300    |
+| 5              | 2       | 2023-01-02       | 50     |
+| 6              | 1       | 2023-01-03       | 200    |
+| 7              | 3       | 2023-01-03       | 100    |
++----------------+---------+------------------+--------+
+
+Expected Output Example
+
+diff
+
++---------+-------------+------------------+
+| user_id | total_amount| transaction_date |
++---------+-------------+------------------+
+| 3       | 300         | 2023-01-02       |
++---------+-------------+------------------+
+
+17 Solution:
+
+WITH cte AS
+(
+SELECT *,
+DENSE_RANK() OVER(PARTITION BY user_id ORDER BY transaction_date ASC) r,
+SUM(amount) OVER(PARTITION BY user_id, transaction_date ORDER BY transaction_date DESC) t_amounts,
+DATE_SUB(transaction_date, INTERVAL ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY transaction_date)DAY) as dates
+FROM Transactions
+)
+SELECT user_id, SUM(t_amounts) AS total_amount, dates AS transaction_date
+FROM cte
+WHERE r = 1
+GROUP BY user_id, dates
+ORDER BY total_amount DESC
+LIMIT 1;
+
+
+*************Solution to use**************
+WITH daily_totals AS (
+    SELECT 
+        user_id, 
+        transaction_date, 
+        SUM(amount) AS total_amount
+    FROM 
+        Transactions
+    GROUP BY 
+        user_id, 
+        transaction_date
+)
+,
+ranked_totals AS (
+    SELECT 
+        user_id, 
+        transaction_date, 
+        total_amount,
+        ROW_NUMBER() OVER (ORDER BY total_amount DESC, transaction_date ASC) AS rnk
+    FROM 
+        daily_totals
+)
+SELECT 
+    user_id, 
+    total_amount, 
+    transaction_date
+FROM 
+    ranked_totals
+WHERE 
+    rnk = 1;
+
+
+Problem Statement
+
+Given two tables, Employee and Transfers, write a SQL query to find the employee who has transferred the most number of times between departments. If there are multiple employees with the same number of transfers, return all of them.
+Table Schemas
+
+css
+
+Employee
++----+-------+
+| Id | Name  |
++----+-------+
+| 1  | John  |
+| 2  | Jane  |
+| 3  | Alice |
+| 4  | Bob   |
+| 5  | Carol |
++----+-------+
+
+Transfers
++-----------+-----------+------------+
+| employee_id | from_dept | to_dept    | transfer_date |
++-----------+-----------+------------+
+|         1 | A         | B          | 2023-01-01    |
+|         2 | A         | C          | 2023-01-02    |
+|         1 | B         | A          | 2023-01-03    |
+|         3 | A         | B          | 2023-01-04    |
+|         2 | C         | A          | 2023-01-05    |
+|         1 | A         | C          | 2023-01-06    |
+|         4 | B         | C          | 2023-01-07    |
+|         3 | B         | A          | 2023-01-08    |
+|         1 | C         | B          | 2023-01-09    |
++-----------+-----------+------------+
+
+Expected Output
+
+diff
+
++----+-------+----------------+
+| Id | Name  | transfer_count |
++----+-------+----------------+
+| 1  | John  |              4 |
++----+-------+----------------+
+
+
+Schema and Data
+
+sql
+
+-- Create the Employee table
+CREATE TABLE Employee (
+    Id INT PRIMARY KEY,
+    Name VARCHAR(50)
+);
+
+-- Insert sample data into the Employee table
+INSERT INTO Employee (Id, Name) VALUES
+(1, 'John'),
+(2, 'Jane'),
+(3, 'Alice'),
+(4, 'Bob'),
+(5, 'Carol');
+
+-- Create the Transfers table
+CREATE TABLE Transfers (
+    employee_id INT,
+    from_dept VARCHAR(50),
+    to_dept VARCHAR(50),
+    transfer_date DATE,
+    FOREIGN KEY (employee_id) REFERENCES Employee(Id)
+);
+
+-- Insert sample data into the Transfers table
+INSERT INTO Transfers (employee_id, from_dept, to_dept, transfer_date) VALUES
+(1, 'A', 'B', '2023-01-01'),
+(2, 'A', 'C', '2023-01-02'),
+(1, 'B', 'A', '2023-01-03'),
+(3, 'A', 'B', '2023-01-04'),
+(2, 'C', 'A', '2023-01-05'),
+(1, 'A', 'C', '2023-01-06'),
+(4, 'B', 'C', '2023-01-07'),
+(3, 'B', 'A', '2023-01-08'),
+(1, 'C', 'B', '2023-01-09');
+
+
+18 Solution:
+
+WITH cte AS
+(
+SELECT t.employee_id AS ID, e.name AS Name, COUNT(from_dept) AS transfer_count
+FROM Transfers t
+JOIN Emp e
+ON t.employee_id = e.id
+GROUP BY employee_id
+),
+ranking AS
+(
+SELECT *,
+RANK() OVER(ORDER BY transfer_count DESC) r
+FROM cte
+)
+SELECT ID, Name, transfer_count
+FROM ranking
+WHERE r = 1;
+
+
+Given a table Attendance with columns employee_id, attendance_date, and status (which can be 'Present' or 'Absent'), write a SQL query to find employees who have been absent for three or more consecutive days.
+Table Schema
+
+sql
+
+CREATE TABLE Attendance (
+    employee_id INT,
+    attendance_date DATE,
+    status VARCHAR(10)
+);
+
+INSERT INTO Attendance (employee_id, attendance_date, status) VALUES
+(1, '2023-01-01', 'Present'),
+(1, '2023-01-02', 'Absent'),
+(1, '2023-01-03', 'Absent'),
+(1, '2023-01-04', 'Absent'),
+(1, '2023-01-05', 'Present'),
+(2, '2023-01-01', 'Absent'),
+(2, '2023-01-02', 'Absent'),
+(2, '2023-01-03', 'Present'),
+(2, '2023-01-04', 'Absent'),
+(3, '2023-01-01', 'Absent'),
+(3, '2023-01-02', 'Absent'),
+(3, '2023-01-03', 'Absent'),
+(3, '2023-01-04', 'Absent'),
+(3, '2023-01-05', 'Absent');
+
+Expected Output
+
+The result should include:
+
+    employee_id
+    start_date (the first day of the consecutive absences)
+    end_date (the last day of the consecutive absences)
+
+Expected output example:
+
+yaml
+
++-------------+------------+------------+
+| employee_id | start_date | end_date   |
++-------------+------------+------------+
+| 1           | 2023-01-02 | 2023-01-04 |
+| 3           | 2023-01-01 | 2023-01-05 |
++-------------+------------+------------+
+
+Schema and Data
+
+sql
+
+-- Create the Attendance table
+CREATE TABLE Attendance (
+    employee_id INT,
+    attendance_date DATE,
+    status VARCHAR(10)
+);
+
+-- Insert sample data into the Attendance table
+INSERT INTO Attendance (employee_id, attendance_date, status) VALUES
+(1, '2023-01-01', 'Present'),
+(1, '2023-01-02', 'Absent'),
+(1, '2023-01-03', 'Absent'),
+(1, '2023-01-04', 'Absent'),
+(1, '2023-01-05', 'Present'),
+(2, '2023-01-01', 'Absent'),
+(2, '2023-01-02', 'Absent'),
+(2, '2023-01-03', 'Present'),
+(2, '2023-01-04', 'Absent'),
+(3, '2023-01-01', 'Absent'),
+(3, '2023-01-02', 'Absent'),
+(3, '2023-01-03', 'Absent'),
+(3, '2023-01-04', 'Absent'),
+(3, '2023-01-05', 'Absent');
+
+
+19 Solution:
+
+SELECT * FROM Attendance;
+WITH cte AS
+(
+SELECT employee_id, attendance_date, status,
+DATE_SUB(attendance_date, INTERVAL ROW_NUMBER() OVER(PARTITION BY employee_id, status ORDER BY attendance_date) DAY) AS dates_group
+FROM Attendance
+WHERE status = 'absent'
+)
+,
+
+grouped_dates AS 
+(
+SELECT employee_id,
+MIN(attendance_date) AS start_date,
+MAX(attendance_date) AS end_date,
+COUNT(*) AS total_days
+FROM cte
+GROUP BY employee_id, dates_group
+)
+SELECT employee_id, start_date, end_date
+FROM grouped_dates
+WHERE total_days >=3;
+
+Question: Employees with Highest Salary in Each Department
+Problem Statement
+
+Given the Employee table with columns id, name, salary, and department_id, write a SQL query to find the employee with the highest salary in each department. If there are multiple employees with the same highest salary in a department, return all of them.
+Table Schema
+
+sql
+
+CREATE TABLE Employee (
+    id INT,
+    name VARCHAR(50),
+    salary DECIMAL(10, 2),
+    department_id INT
+);
+
+INSERT INTO Employee (id, name, salary, department_id) VALUES
+(1, 'Alice', 90000, 1),
+(2, 'Bob', 85000, 1),
+(3, 'Charlie', 90000, 1),
+(4, 'David', 80000, 2),
+(5, 'Eve', 95000, 2),
+(6, 'Frank', 95000, 2);
+
+Expected Output
+
+The result should include:
+
+    department_id
+    employee_name
+    salary
+
+Expected output example:
+
+diff
+
++--------------+--------------+--------+
+| department_id| employee_name| salary |
++--------------+--------------+--------+
+| 1            | Alice        | 90000  |
+| 1            | Charlie      | 90000  |
+| 2            | Eve          | 95000  |
+| 2            | Frank        | 95000  |
++--------------+--------------+--------+
+
+20 Solution:
+
+WITH cte AS
+(
+SELECT id, name, salary, department_id,
+DENSE_RANK() OVER(PARTITION BY department_id ORDER BY salary DESC) r
+FROM Emp_1
+)
+SELECT department_id, name AS employee_name, salary
+FROM cte
+WHERE r = 1;
+
+Question: Find Users with No Activity in the Last Month
+Problem Statement
+
+Given two tables, Users and Activity, write a SQL query to find users who had no activity in the last month (consider the current month to be June 2024 for this example). Return the user_id and user_name of such users.
+Table Schema
+
+sql
+
+CREATE TABLE Users (
+    user_id INT,
+    user_name VARCHAR(50)
+);
+
+CREATE TABLE Activity (
+    activity_id INT,
+    user_id INT,
+    activity_date DATE
+);
+
+INSERT INTO Users (user_id, user_name) VALUES
+(1, 'Alice'),
+(2, 'Bob'),
+(3, 'Charlie'),
+(4, 'David'),
+(5, 'Eve');
+
+INSERT INTO Activity (activity_id, user_id, activity_date) VALUES
+(1, 1, '2024-04-15'),
+(2, 2, '2024-05-20'),
+(3, 1, '2024-06-05'),
+(4, 3, '2024-06-10'),
+(5, 4, '2024-04-01'),
+(6, 5, '2024-05-30');
+
+Expected Output
+
+The result should include:
+
+    user_id
+    user_name
+
+Expected output example:
+
+diff
+
++---------+-----------+
+| user_id | user_name |
++---------+-----------+
+| 1       | Alice    	 |
+| 4       | David   	 |
++---------+-----------+
+
+Write your query to find users who had no activity in the last month. 
+
+21 Solution:
+
+First solution joins the table in a single query which scans every row to check the date May 2024 which could result in slower performance specially if the May 20204 was a busy month, whereas the second query isolates May 2024 then performs join to to exlude the the list of user, it uses cte that makes it resuable and efficient leveraging indexes on activity_date column if they exist making it more efficient; The final join is relatively straightforward and could be optimized by indexes on user_id. Thereby making cte approach with join later is more efficient especially if indexes are properly utilized and provides step by step approach.
+
+
+
+
+a) SELECT DISTINCT(a.user_id) AS user_id, u.user_name
+FROM Activity A
+LEFT JOIN Users u
+USING (user_id)
+WHERE MONTH(a.activity_date) <> '05'AND YEAR(a.activity_date) = '2024';
+
+
+b) WITH users_with_may_activity AS (
+    SELECT DISTINCT user_id
+    FROM Activity
+    WHERE MONTH(activity_date) = 5 AND YEAR(activity_date) = 2024
+)
+
+SELECT u.user_id, u.user_name
+FROM Users u
+LEFT JOIN users_with_may_activity uwma
+ON u.user_id = uwma.user_id
+WHERE uwma.user_id IS NULL;
+
+Write an SQL query to find the product that has the highest average sales amount per order. If multiple products have the same average sales amount, return the product with the highest total sales amount. Include the product ID, product name, and the average sales amount.
+Schema
+
+sql
+
+CREATE TABLE Products (
+    product_id INT PRIMARY KEY,
+    product_name VARCHAR(100),
+    price_per_unit DECIMAL(10, 2)
+);
+
+CREATE TABLE Orders (
+    order_id INT PRIMARY KEY,
+    order_date DATE,
+    customer_id INT
+);
+
+CREATE TABLE Order_Items (
+    order_item_id INT PRIMARY KEY,
+    order_id INT,
+    product_id INT,
+    quantity INT
+);
+
+Sample Data
+
+sql
+
+INSERT INTO Products (product_id, product_name, price_per_unit) VALUES
+(1, 'Product A', 10.00),
+(2, 'Product B', 20.00),
+(3, 'Product C', 30.00);
+
+INSERT INTO Orders (order_id, order_date, customer_id) VALUES
+(1, '2024-06-01', 1),
+(2, '2024-06-02', 2),
+(3, '2024-06-03', 3);
+
+INSERT INTO Order_Items (order_item_id, order_id, product_id, quantity) VALUES
+(1, 1, 1, 2),
+(2, 1, 2, 1),
+(3, 2, 1, 1),
+(4, 2, 3, 5),
+(5, 3, 2, 2),
+(6, 3, 3, 1);
+
+Expected Output Example
+
+diff
+
++------------+-------------+--------------------+
+| product_id | product_name| avg_sales_per_order|
++------------+-------------+--------------------+
+| 3          | Product C   | 30.00              |
++------------+-------------+--------------------+
+
+22 Solution:
+
+
+
+
+****************
+
+Problem
+
+Write a query to find the customers who have ordered the most distinct products across all their orders. The result should include the customer name and the number of distinct products they have ordered.
+Sample Data
+
+Customers Table
+customer_id	customer_name
+1	Alice
+2	Bob
+3	Charlie
+
+Orders Table
+order_id	order_date	customer_id
+101	2024-05-15 10:00:00	1
+102	2024-05-20 14:00:00	2
+103	2024-05-25 16:00:00	1
+104	2024-06-01 11:00:00	3
+105	2024-06-05 13:00:00	2
+
+Order_Items Table
+item_id	order_id	product_id	quantity	price
+1	101	1	2	50.00
+2	101	2	1	100.00
+3	102	1	1	50.00
+4	102	3	2	150.00
+5	103	1	1	50.00
+6	104	2	1	100.00
+7	105	3	1	150.00
+8	105	4	1	200.00
+Expected Output
+customer_name	distinct_products
+Bob	3
+Your Task
+
+Write the SQL query to find the customers who have ordered the most distinct products across all their orders.
+
+23 Solution: 
+WITH cte AS
+(
+SELECT c.customer_name, COUNT(DISTINCT oi.product_id) AS distinct_products
+FROM Cutomers c
+JOIN Oders o ON c.customer_id = c.customer_id
+JOIN Order_Item oi ON o.order_id = oi.order_id 
+GROUP BY 
+)
+SELECT customer_name, distinct_products
+FROM cte
+ORDER BY distinct_products DESC
+LIMIT 1;
+
+
+
+Problem Statement
+
+You have a table Transactions that records the transaction amounts for different customers. Each transaction is recorded with a timestamp indicating when it occurred. Your task is to find the longest consecutive sequence of transactions for each customer where each transaction amount is greater than the previous one.
+Table Schema
+
+Assume the Transactions table has the following schema:
+
+sql
+
+CREATE TABLE Transactions (
+    transaction_id INT PRIMARY KEY,
+    customer_id INT,
+    transaction_amount DECIMAL(10, 2),
+    transaction_date TIMESTAMP
+);
+
+Sample Dataset
+
+Here is a sample dataset for the Transactions table:
+transaction_id	customer_id	transaction_amount	transaction_date
+1	101	100.00	2024-01-01 10:00:00
+2	101	110.00	2024-01-02 11:00:00
+3	101	120.00	2024-01-03 12:00:00
+4	101	105.00	2024-01-04 13:00:00
+5	101	130.00	2024-01-05 14:00:00
+6	102	50.00	2024-01-01 09:00:00
+7	102	60.00	2024-01-02 10:00:00
+8	102	70.00	2024-01-03 11:00:00
+9	102	75.00	2024-01-04 12:00:00
+10	102	65.00	2024-01-05 13:00:00
+11	102	80.00	2024-01-06 14:00:00
+Expected Output
+
+For the sample dataset provided, the expected output would be:
+customer_id	start_transaction_id	end_transaction_id	start_amount	end_amount	transaction_count
+101	1	3	100.00	120.00	3
+101	4	5	105.00	130.00	2
+102	7	9	60.00	75.00	3
+102	10	11	65.00	80.00	2
+
+24 Solution:
+
+WITH SortedTransactions AS (
+    SELECT 
+        transaction_id,
+        customer_id,
+        transaction_amount,
+        transaction_date,
+        ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY transaction_date) AS row_num,
+        LAG(transaction_amount) OVER (PARTITION BY customer_id ORDER BY transaction_date) AS prev_transaction_amount
+    FROM Transactions_1
+),
+Islands AS (
+    SELECT 
+        transaction_id,
+        customer_id,
+        transaction_amount,
+        transaction_date,
+        row_num,
+        CASE
+            WHEN prev_transaction_amount IS NULL OR prev_transaction_amount >= transaction_amount THEN 1
+            ELSE 0
+        END AS is_new_group
+    FROM SortedTransactions
+),
+GroupIdentifiers AS (
+    SELECT 
+        transaction_id,
+        customer_id,
+        transaction_amount,
+        transaction_date,
+        row_num,
+        SUM(is_new_group) OVER (PARTITION BY customer_id ORDER BY row_num) AS group_id
+    FROM Islands
+)
+
+    SELECT
+        customer_id,
+        group_id,
+        MIN(transaction_id) AS start_transaction_id,
+        MAX(transaction_id) AS end_transaction_id,
+        MIN(transaction_amount) AS start_amount,
+        MAX(transaction_amount) AS end_amount,
+        COUNT(*) AS transaction_count
+    FROM GroupIdentifiers
+    GROUP BY customer_id, group_id;
+
+
+
+JSON Functionalities...
+
+CREATE TABLE Products_8 (
+    product_id INT PRIMARY KEY,
+    name VARCHAR(100),
+    details JSON
+);
+
+INSERT INTO Products_8 (product_id, name, details) VALUES
+(1, 'Laptop', '{"specs": [{"type": "processor", "value": "Intel i7"}, {"type": "ram", "value": "16GB"}, {"type": "storage", "value": "512GB SSD"}], "prices": [1200, 1300, 1250], "in_stock": true}'),
+(2, 'Smartphone', '{"specs": [{"type": "processor", "value": "Snapdragon 888"}, {"type": "ram", "value": "8GB"}, {"type": "storage", "value": "128GB"}], "prices": [800, 850, 825], "in_stock": false}');
+
+
+SELECT * FROM Products_8;
+
+SELECT product_id, name,
+JSON_UNQUOTE(JSON_EXTRACT(details, '$.specs[0].value')) AS processor,
+JSON_UNQUOTE(JSON_EXTRACT(details, '$.specs[1].value')) AS ram,
+JSON_UNQUOTE(JSON_EXTRACT(details, '$.specs[2].value')) AS storage,
+JSON_UNQUOTE(JSON_EXTRACT(details, '$.prices[0]')) AS price_1,
+JSON_UNQUOTE(JSON_EXTRACT(details, '$.prices[1]')) AS price_2,
+JSON_UNQUOTE(JSON_EXTRACT(details, '$.prices[2]')) AS price_3,
+JSON_UNQUOTE(JSON_EXTRACT(details, '$.in_stock')) AS in_stock
+FROM Products_8;
+
+**************Retrieving data from complex form json array using json_table***************
+
+
+CREATE TABLE Sales_11 (
+    sale_id INT PRIMARY KEY,
+    sale_date DATE,
+    customer_id INT,
+    details JSON
+);
+INSERT INTO Sales_11 (sale_id, sale_date, customer_id, details) VALUES
+(1, '2023-01-10', 101, '{"products": [{"product_id": 1, "product_name": "Laptop", "quantity": 2, "price": 1000.00}, {"product_id": 2, "product_name": "Mouse", "quantity": 1, "price": 50.00}], "shipping": {"address": "123 Main St", "cost": 10.00}}'),
+(2, '2023-02-15', 102, '{"products": [{"product_id": 3, "product_name": "Phone", "quantity": 1, "price": 500.00}, {"product_id": 4, "product_name": "Charger", "quantity": 2, "price": 25.00}], "shipping": {"address": "456 Elm St", "cost": 5.00}}');
+
+
+24 Solution:
+
+SELECT 
+    customer_id,
+    DATE_FORMAT(sale_date, '%Y-%m') AS month,
+    SUM(total_sales) AS total_sales,
+    SUM(total_shipping_cost) AS total_shipping_cost
+FROM (
+    SELECT 
+        customer_id, 
+        sale_date,
+        SUM(products.price * products.quantity) AS total_sales,
+        CAST(JSON_UNQUOTE(JSON_EXTRACT(details, '$.shipping.cost')) AS DECIMAL(10, 2)) AS total_shipping_cost
+    FROM Sales_11,
+    JSON_TABLE(details, '$.products[*]' 
+        COLUMNS (
+            product_id INT PATH '$.product_id', 
+            product_name VARCHAR(100) PATH '$.product_name',
+            quantity INT PATH '$.quantity', 
+            price DECIMAL(10, 2) PATH '$.price'
+        )
+    ) AS products
+    GROUP BY customer_id, sale_date
+) AS subquery
+GROUP BY customer_id, month
+ORDER BY customer_id, month;
+
+
+
+NOTE: shipping is a separate object in details column than products. However, we were able to retreive data from shipping without json_table as it is a simple array whereas products table returns null without json_table.
+
+
+MySQL, Apache Spark, Spark SQL, Databrick, Power BI, 
+
+***************************************
+
+Problem Statement
+
+Consider an Orders_13 table that stores customer orders with details about products and their respective reviews. Each order can have multiple products, and each product can have multiple reviews.
+Table Schema
+
+sql
+
+CREATE TABLE Orders_13 (
+    order_id INT PRIMARY KEY,
+    customer_id INT,
+    order_date DATE,
+    details JSON
+);
+
+Sample Dataset
+
+sql
+
+INSERT INTO Orders_13 (order_id, customer_id, order_date, details) VALUES
+(1, 201, '2023-01-10', '{
+    "products": [
+        {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "quantity": 1,
+            "price": 1000,
+            "reviews": [
+                {"review_id": 101, "rating": 5, "comment": "Excellent"},
+                {"review_id": 102, "rating": 4, "comment": "Very Good"}
+            ]
+        },
+        {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "quantity": 2,
+            "price": 50,
+            "reviews": [
+                {"review_id": 103, "rating": 3, "comment": "Average"}
+            ]
+        }
+    ]
+}'),
+(2, 202, '2023-02-15', '{
+    "products": [
+        {
+            "product_id": 3,
+            "product_name": "Keyboard",
+            "quantity": 1,
+            "price": 100,
+            "reviews": [
+                {"review_id": 104, "rating": 4, "comment": "Good"},
+                {"review_id": 105, "rating": 2, "comment": "Bad"}
+            ]
+        },
+        {
+            "product_id": 4,
+            "product_name": "Monitor",
+            "quantity": 1,
+            "price": 300,
+            "reviews": []
+        }
+    ]
+}'),
+(3, 203, '2023-03-20', '{
+    "products": [
+        {
+            "product_id": 5,
+            "product_name": "Phone",
+            "quantity": 1,
+            "price": 800,
+            "reviews": [
+                {"review_id": 106, "rating": 5, "comment": "Excellent"}
+            ]
+        }
+    ]
+}');
+
+Task
+
+Write a query to retrieve the following for each customer:
+
+    The total sales amount per month.
+    The average rating of all products reviewed per month.
+
+Expected Output
+
+The result should include the customer_id, month, total_sales, and average_rating.
+Guidelines
+
+    Use JSON_TABLE to extract the product and review details.
+    Ensure the reviews are aggregated correctly to calculate the average rating.
+
+25 Solution:
+
+SELECT customer_id, DATE_FORMAT(order_date, '%Y-%m-01') AS month, SUM(total_sales) AS total_sales, AVG(average_rating) AS average_rating
+ FROM
+(
+SELECT customer_id, order_date, 
+SUM(products.price * products.quantity) AS total_sales,
+AVG(reviews.rating) AS average_rating
+FROM Orders_13,
+JSON_TABLE(details, '$.products[*]'
+				COLUMNS (
+						price DECIMAL(10, 2) PATH '$.price',
+                        quantity INT PATH '$.quantity',
+                        product_id INT PATH '$.product_id',
+                        product_name TEXT PATH '$.product_name',
+                        reviews JSON PATH '$.reviews[*]'
+						)
+            ) AS Products,
+JSON_TABLE(products.reviews, '$[*]'
+					COLUMNS(
+							rating INT PATH '$.rating'
+							)
+						
+            ) AS reviews
+  GROUP BY customer_id, order_date
+) AS Subquery
+GROUP BY customer_id, month
+ORDER BY customer_id, month;
+ 
+
+
+NOTE: This problem has a complex array which is nested array viz, products having nested array reviews. We need to create separate json_table for both products and reviews. While creating json_table for products, we metion reviews with JSON PATH and give path as '$.reviews[*]'
+
+
+Your query has the right structure but needs some adjustments to achieve the expected results. Here’s a refined version of your query along with a detailed explanation of the changes:
+Corrected Query
+
+sql
+
+SELECT 
+    customer_id, 
+    DATE_FORMAT(order_date, '%Y-%m-01') AS month, 
+    SUM(total_sales) AS total_sales, 
+    AVG(average_rating) AS average_rating
+FROM (
+    SELECT 
+        customer_id, 
+        order_date, 
+        SUM(products.price * products.quantity) AS total_sales,
+        AVG(reviews.rating) AS average_rating
+    FROM Orders_13,
+    JSON_TABLE(
+        details, 
+        '$.products[*]' 
+        COLUMNS (
+            price DECIMAL(10, 2) PATH '$.price',
+            quantity INT PATH '$.quantity',
+            product_id INT PATH '$.product_id',
+            product_name TEXT PATH '$.product_name',
+            reviews JSON PATH '$.reviews[*]'
+        )
+    ) AS products,
+    JSON_TABLE(
+        products.reviews, 
+        '$[*]' 
+        COLUMNS (
+            rating INT PATH '$.rating'
+        )
+    ) AS reviews
+    GROUP BY customer_id, order_date
+) AS subquery
+GROUP BY customer_id, month
+ORDER BY customer_id, month;
+
+Explanation of Changes
+
+    Using JSON_TABLE for Nested JSON Objects:
+        Extract products and reviews separately to handle the nested JSON structure.
+        Added reviews JSON PATH '$.reviews[*]' in the products JSON_TABLE to access the nested reviews array.
+
+    Aggregating Reviews:
+        Added another JSON_TABLE for reviews to extract rating values.
+        AVG(reviews.rating) computes the average rating for each product.
+
+    Total Sales Calculation:
+        SUM(products.price * products.quantity) calculates the total sales for each product.
+
+    Group By Adjustments:
+        Grouped by customer_id and order_date for calculating total_sales and average_rating.
+        Aggregated total_sales and average_rating in the outer query to get the monthly totals.
+
+Alternative for Total Sales Calculation
+
+The alternative approach you mentioned for calculating total_sales:
+
+sql
+
+SUM(CAST(JSON_UNQUOTE(JSON_EXTRACT(details, '$.products.price')) AS DECIMAL(10, 2))) AS total_sales,
+
+This approach only works if price is a top-level JSON attribute, which is not the case here. In this example, price is part of the products array, so JSON_TABLE is necessary.
+Final Dataset for Orders_13
+order_id	customer_id	order_date	details
+1	201	2023-01-10	{"products": [{"product_id": 1, "product_name": "Laptop", "quantity": 1, "price": 1000, "reviews": [{"review_id": 101, "rating": 5, "comment": "Excellent"}, {"review_id": 102, "rating": 4, "comment": "Very Good"}]}, {"product_id": 2, "product_name": "Mouse", "quantity": 2, "price": 50, "reviews": [{"review_id": 103, "rating": 3, "comment": "Average"}]}], "delivery": {"type": "Express", "cost": 20}}
+2	202	2023-02-15	{"products": [{"product_id": 3, "product_name": "Keyboard", "quantity": 1, "price": 100, "reviews": [{"review_id": 104, "rating": 4, "comment": "Good"}, {"review_id": 105, "rating": 2, "comment": "Bad"}]}, {"product_id": 4, "product_name": "Monitor", "quantity": 1, "price": 300, "reviews": []}], "delivery": {"type": "Standard", "cost": 10}}
+3	203	2023-03-20	{"products": [{"product_id": 5, "product_name": "Phone", "quantity": 1, "price": 800, "reviews": [{"review_id": 106, "rating": 5, "comment": "Excellent"}]}], "delivery": {"type": "Express", "cost": 15}}
+Practice Problem 3
+
+Here’s another JSON functionality problem for you to practice:
+Problem Statement
+
+Consider a Orders_14 table that stores customer orders with product details and discounts. Each order has multiple products, and each product can have multiple discounts.
+Table Schema
+
+sql
+
+CREATE TABLE Orders_14 (
+    order_id INT PRIMARY KEY,
+    customer_id INT,
+    order_date DATE,
+    details JSON
+);
+
+Sample Dataset
+
+sql
+
+INSERT INTO Orders_14 (order_id, customer_id, order_date, details) VALUES
+(1, 301, '2023-01-10', '{
+    "products": [
+        {
+            "product_id": 1,
+            "product_name": "Tablet",
+            "quantity": 2,
+            "price": 400,
+            "discounts": [
+                {"discount_id": 201, "amount": 50},
+                {"discount_id": 202, "amount": 20}
+            ]
+        },
+        {
+            "product_id": 2,
+            "product_name": "Headphones",
+            "quantity": 1,
+            "price": 100,
+            "discounts": [
+                {"discount_id": 203, "amount": 10}
+            ]
+        }
+    ]
+}'),
+(2, 302, '2023-02-15', '{
+    "products": [
+        {
+            "product_id": 3,
+            "product_name": "Smartwatch",
+            "quantity": 1,
+            "price": 200,
+            "discounts": [
+                {"discount_id": 204, "amount": 30}
+            ]
+        },
+        {
+            "product_id": 4,
+            "product_name": "Printer",
+            "quantity": 1,
+            "price": 150,
+            "discounts": []
+        }
+    ]
+}'),
+(3, 303, '2023-03-20', '{
+    "products": [
+        {
+            "product_id": 5,
+            "product_name": "Camera",
+            "quantity": 1,
+            "price": 600,
+            "discounts": []
+        }
+    ]
+}');
+
+Task
+
+Write a query to calculate:
+
+    The total amount of discounts given per month.
+    The total amount spent on products per month (considering the discounts).
+
+Example Output
+customer_id	month	total_discount	total_amount_spent
+301	2023-01-01	70.00	740.00
+302	2023-02-01	30.00	370.00
+303	2023-03-01	0.00	600.00
+
+26 Solution:
+
+	SELECT customer_id, DATE_FORMAT(order_date, '%Y-%m-01') AS month, 
+       COALESCE(SUM(total_discount), 0) AS total_discount, 
+       COALESCE(SUM(total_amount_spent), 0) AS total_amount_spent
+FROM (
+    SELECT customer_id, order_date,	
+           COALESCE(SUM(discounts.amount), 0) AS total_discount, 
+           SUM(products.price * products.quantity) AS total_amount_spent
+    FROM Orders_14
+    JOIN JSON_TABLE(
+        details, '$.products[*]'
+        COLUMNS(
+            price DECIMAL(10, 2) PATH '$.price',
+            quantity INT PATH '$.quantity',
+            product_id INT PATH '$.product_id',
+            product_name TEXT PATH '$.product_name',
+            discounts JSON PATH '$.discounts'
+        )
+    ) AS products ON TRUE
+    LEFT JOIN JSON_TABLE(
+        products.discounts, '$[*]'
+        COLUMNS(
+            amount DECIMAL(10, 2) PATH '$.amount',
+            discount_id INT PATH '$.discount_id'
+        )
+    ) AS discounts ON TRUE
+    GROUP BY customer_id, order_date
+) AS subquery
+GROUP BY customer_id, month
+ORDER BY customer_id, month;
+
+
+NOTE: Use of LEFT JOIN with ON TRUE (gets cartesian join even where there aren't joining conditions available) within an objects having nested arrays to ensure all columns are retrieved. And use of COASLESCE to ensure null values are handled correctly in aggregation calculations.
+
+
+
+Another Example with nested json arrays using join.
+
+-- Create the Orders_15 table
+CREATE TABLE Orders_15 (
+    order_id INT PRIMARY KEY,
+    customer_id INT,
+    order_date DATE,
+    details JSON
+);
+
+-- Insert sample data into Orders_15 table
+INSERT INTO Orders_15 (order_id, customer_id, order_date, details) VALUES
+(1, 401, '2023-01-10', '{
+    "products": [
+        {
+            "product_id": 1,
+            "product_name": "Laptop",
+            "quantity": 1,
+            "price": 1000,
+            "reviews": [{"review_id": 101, "rating": 5}]
+        },
+        {
+            "product_id": 2,
+            "product_name": "Mouse",
+            "quantity": 2,
+            "price": 50,
+            "reviews": [{"review_id": 102, "rating": 4}]
+        }
+    ]
+}'),
+(2, 402, '2023-02-15', '{
+    "products": [
+        {
+            "product_id": 3,
+            "product_name": "Smartphone",
+            "quantity": 1,
+            "price": 800,
+            "reviews": [{"review_id": 103, "rating": 4}]
+        },
+        {
+            "product_id": 4,
+            "product_name": "Earbuds",
+            "quantity": 3,
+            "price": 60,
+            "reviews": [{"review_id": 104, "rating": 5}]
+        }
+    ]
+}'),
+(3, 403, '2023-03-20', '{
+    "products": [
+        {
+            "product_id": 5,
+            "product_name": "Tablet",
+            "quantity": 1,
+            "price": 400,
+            "reviews": [{"review_id": 105, "rating": 3}]
+        }
+    ]
+}');
+
+
+27 Solution:
+
+SELECT customer_id, DATE_FORMAT(order_date, '%Y-%m-01') AS month,
+COALESCE(SUM(total_items),0) AS total_items, 
+COALESCE(SUM(total_cost),0) AS total_cost,
+ROUND(AVG(average_rating),2) AS average_rating
+FROM
+(
+SELECT customer_id, order_date,
+COALESCE(SUM(products.quantity),0) AS total_items, 
+COALESCE(SUM(products.price * products.quantity),0) AS total_cost,
+AVG(reviews.rating) AS average_rating
+FROM Orders_15,
+JSON_TABLE(
+			details, '$.products[*]'
+            COLUMNS(
+		           price INT PATH '$.price',
+                   quantity INT PATH '$.quantity',
+                   product_id INT PATH '$.product_id',
+                   product_name INT PATH '$.product_name',
+                   reviews JSON PATH '$.reviews'
+                    ) 
+            ) AS Products
+            LEFT JOIN JSON_TABLE(
+								products.reviews, '$[*]'
+                                COLUMNS(
+										rating INT PATH '$.rating',
+                                        review_id INT PATH '$.review_id'
+                                        )
+								) AS Reviews ON TRUE
+GROUP BY customer_id, order_date
+) AS Subquery
+GROUP BY customer_id, month
+ORDER BY customer_id, month;
+
+
